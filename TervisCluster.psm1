@@ -76,14 +76,23 @@ function Get-TervisClusterSharedVolumeToStoreVMOSOn {
     $EstimatedVMOSStorageSpace = 300
     $AmountOfSafetyEmptySpace = 300
 
-    $CSVs = Get-TervisClusterSharedVolume -Cluster $Cluster 
-    $CSVToStoreVMOS = $CSVs | 
-    where metadata -NotContains "CX3-20" |
-    where metadata -NotContains "Dedup" |
-    where metadata -Contains "Auto-Tier" | 
-    where {($_.FreeSpace - $EstimatedVMOSStorageSpace) -gt $AmountOfSafetyEmptySpace } | 
-    sort FreeSpace -Descending | 
-    Select -First 1
+    $Cluster = Get-TervisCluster -Name $cluster
+    $CSVs = Get-TervisClusterSharedVolume -Cluster $Cluster
+
+    if($Cluster.ADSite -eq "Tervis") {
+        $CSVToStoreVMOS = $CSVs | 
+        where metadata -NotContains "CX3-20" |
+        where metadata -NotContains "Dedup" |
+        where metadata -Contains "Auto-Tier" | 
+        where {($_.FreeSpace - $EstimatedVMOSStorageSpace) -gt $AmountOfSafetyEmptySpace } | 
+        sort FreeSpace -Descending | 
+        Select -First 1
+    } else {
+        $CSVToStoreVMOS = $CSVs | 
+        where {($_.FreeSpace - $EstimatedVMOSStorageSpace) -gt $AmountOfSafetyEmptySpace } | 
+        sort FreeSpace -Descending | 
+        Select -First 1
+    }
 
     $CSVToStoreVMOS
 }
@@ -108,4 +117,19 @@ filter Mixin-ClusterSharedVolume {
     $_ | Add-Member -MemberType ScriptProperty -Name MetaData -Value { 
         $($this.Name -split {$_ -eq "(" -or $_ -eq ")"})[1] -split ", "
     }
+}
+
+
+function Get-TervisCluster {
+    param(
+        [Parameter(Mandatory)][String]$Name
+    )
+
+    $Cluster = Get-Cluster -Name $Name
+    $Cluster | Mixin-Cluster
+    $Cluster
+}
+
+filter Mixin-Cluster {
+    $_ | Add-Member -MemberType ScriptProperty -Name ADSite -Value { Get-ComputerSite -ComputerName $this.Name }
 }
