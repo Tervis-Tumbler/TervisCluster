@@ -71,15 +71,17 @@ function Get-ClusterADSite {
 
 function Get-TervisClusterSharedVolumeToStoreVMOSOn {
     param(
-        [Parameter(Mandatory)][String]$Cluster
+        [Alias("Cluster")][Parameter(Mandatory)][String]$ClusterName
     )
     $EstimatedVMOSStorageSpace = 300
     $AmountOfSafetyEmptySpace = 300
 
-    $Cluster = Get-TervisCluster -Name $cluster
+    $Cluster = Get-TervisCluster -Name $ClusterName
     $CSVs = Get-TervisClusterSharedVolume -Cluster $Cluster
 
-    if($Cluster.ADSite -eq "Tervis") {
+    if (-not $Cluster.ADSite) {throw "No ADSite could be determined for the cluster"}
+
+    if ($Cluster.ADSite -eq "Tervis") {
         $CSVToStoreVMOS = $CSVs | 
         where metadata -NotContains "CX3-20" |
         where metadata -NotContains "Dedup" |
@@ -125,11 +127,30 @@ function Get-TervisCluster {
         [Parameter(Mandatory)][String]$Name
     )
 
-    $Cluster = Get-Cluster -Name $Name
-    $Cluster | Mixin-Cluster
+    $Cluster = Get-Cluster -Name $Name | Add-ClusterCustomMembers
     $Cluster
 }
 
-filter Mixin-Cluster {
-    $_ | Add-Member -MemberType ScriptProperty -Name ADSite -Value { Get-ComputerSite -ComputerName $this.Name }
+filter Add-ClusterCustomMembers {
+    $_ | Add-Member -MemberType ScriptProperty -Name ADSite -Value {Get-TervisClusterNode -Cluster $this.Name | where State -EQ "Up" | select -First 1 -Wait -ExpandProperty ADSite  }
+    $_
+}
+
+function Get-TervisClusterNode {
+    param(
+        [Parameter(Mandatory)][String]$Cluster
+    )
+    Get-ClusterNode -Cluster $Cluster |
+    Add-ClusterNodeCustomMembers -Passthru
+}
+
+function Add-ClusterNodeCustomMembers {
+    param(
+        [Parameter(ValueFromPipeline,Mandatory)]$ClusterNode,
+        [Switch]$Passthru
+    )
+    process {
+        $ClusterNode | Add-Member -MemberType ScriptProperty -Name ADSite -Value { Get-ComputerSite -ComputerName $this.Name }
+        if ($Passthru) {$ClusterNode}
+    }
 }
