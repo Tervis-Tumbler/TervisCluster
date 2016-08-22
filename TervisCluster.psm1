@@ -135,22 +135,3 @@ filter Add-ClusterCustomMembers {
     $_ | Add-Member -MemberType ScriptProperty -Name ADSite -Value {Get-TervisClusterNode -Cluster $this.Name | where State -EQ "Up" | select -First 1 -Wait -ExpandProperty ADSite  }
     $_
 }
-
-function Get-TervisClusterNode {
-    param(
-        [Parameter(Mandatory)][String]$Cluster
-    )
-    Get-ClusterNode -Cluster $Cluster |
-    Add-ClusterNodeCustomMembers -Passthru
-}
-
-function Add-ClusterNodeCustomMembers {
-    param(
-        [Parameter(ValueFromPipeline,Mandatory)]$ClusterNode,
-        [Switch]$Passthru
-    )
-    process {
-        $ClusterNode | Add-Member -MemberType ScriptProperty -Name ADSite -Value { Get-ComputerSite -ComputerName $this.Name }
-        if ($Passthru) {$ClusterNode}
-    }
-}
