@@ -124,14 +124,19 @@ filter Mixin-ClusterSharedVolume {
 
 function Get-TervisCluster {
     param(
-        [Parameter(Mandatory)][String]$Name
+        [Parameter(Mandatory, ParameterSetName = "Name")][String]$Name,
+        [Parameter(Mandatory, ParameterSetName = "Domain")][String]$Domain
     )
 
-    $Cluster = Get-Cluster -Name $Name | Add-ClusterCustomMembers
+    $Cluster = Get-Cluster @PSBoundParameters | Add-ClusterCustomMembers
     $Cluster
 }
 
 filter Add-ClusterCustomMembers {
-    $_ | Add-Member -MemberType ScriptProperty -Name ADSite -Value {Get-TervisClusterNode -Cluster $this.Name | where State -EQ "Up" | select -First 1 -Wait -ExpandProperty ADSite  }
+    $_ | Add-Member -MemberType ScriptProperty -Name ADSite -Value {
+        Get-TervisClusterNode -Cluster $this.Name | 
+        where State -EQ "Up" | 
+        select -First 1 -Wait -ExpandProperty ADSite  
+    }
     $_
 }
