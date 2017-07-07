@@ -34,12 +34,12 @@ function Get-TervisClusterNode {
     )
     process {
         $ClusterNodes = Get-ClusterNode -cluster $Cluster
-        $ClusterNodes | Mixin-ClusterNode
+        $ClusterNodes | Add-ClusterNodeCustomProperties
         $ClusterNodes
     }   
 }
 
-filter Mixin-ClusterNode {
+filter Add-ClusterNodeCustomProperties {
     $_ | Add-Member -MemberType ScriptProperty -Name FreeMemory -Value { (Get-WmiObject win32_operatingsystem -ComputerName $This).FreePhysicalMemory / 1MB -as [int] }
     $_ | Add-Member -MemberType ScriptProperty -Name TotalMemory -Value { (Get-WmiObject win32_operatingsystem -ComputerName $This).TotalVisibleMemorySize / 1MB -as [int] }
     $_ | Add-Member -MemberType ScriptProperty -Name UsedMemory -Value { $This.TotalMemory - $this.FreeMemory }
