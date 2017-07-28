@@ -140,3 +140,14 @@ filter Add-ClusterCustomMembers {
     }
     $_
 }
+
+function Add-NodeToTervisCluster {
+    param(
+        [Parameter(Mandatory,ValueFromPipelineByPropertyName)]$ComputerName,
+        [Parameter(Mandatory)][String]$Cluster
+    )
+    $ClusterNodes = Get-ClusterNode -Cluster $Cluster
+    if (-NOT (($ClusterNodes).Name -contains $ComputerName)) {
+        Add-ClusterNode -Name $ComputerName -Cluster $Cluster
+    }
+}
