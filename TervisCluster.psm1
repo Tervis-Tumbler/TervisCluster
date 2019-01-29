@@ -3,7 +3,8 @@ function Get-TervisClusterNodeToHostVM {
         [Parameter(Mandatory)]$VMSize,
         [Parameter(Mandatory)]$Cluster
     )
-    $ClusterNodes = Get-TervisClusterNode -Cluster $Cluster
+    $ClusterNodes = Get-TervisClusterNode -Cluster $Cluster | 
+    Where-Object State -eq Up
 
     Test-TervisClusterNodesNPlusOne -ClusterNodes $ClusterNodes
 
